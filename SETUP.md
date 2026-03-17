@@ -38,8 +38,10 @@ Optional:
 
 - `OPENAI_DRY_RUN=1` (fallback mode, no OpenAI usage)
 - `TWILIO_AUTH_TOKEN=...` (fallback Twilio auth mode)
-- `TWILIO_VALIDATE_SIGNATURE=1` (default). Set `TWILIO_VALIDATE_SIGNATURE=0` only for local troubleshooting.
+- `TWILIO_VALIDATE_SIGNATURE=1` (default). Set `TWILIO_VALIDATE_SIGNATURE=0` only for local troubleshooting (never in production).
 - `ADMIN_TOKEN=...` (optional; when set, `/env-check` requires `X-Admin-Token` or `Authorization: Bearer <token>`)
+- `UI_ACCESS_TOKEN=...` (optional; when set, `/calls` and `/calls/{call_sid}` require `?token=<value>` or `ui_token` cookie)
+- `DELETE_AUDIO_AFTER_TRANSCRIBE=1` (optional; deletes downloaded call audio after transcription)
 
 ## 3) Public callback URL
 
@@ -81,7 +83,7 @@ Live:
 
 1. Place a test call to IVR number
 2. Confirm files in `data/calls/`:
-   - `CA....mp3`
+   - `CA....mp3` or `CA....wav` (if deletion disabled)
    - `CA....json`
 3. Open `http://127.0.0.1:8000/calls`
 

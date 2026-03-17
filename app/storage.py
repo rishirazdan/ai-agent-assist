@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 from pathlib import Path
 from typing import Dict, Any, List
 
@@ -12,6 +13,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 CALLS_DIR = DATA_DIR / "calls"
 CALL_SID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+_WRITE_LOCKS: Dict[str, threading.Lock] = {}
+_LOCKS_MUTEX = threading.Lock()
 
 
 def ensure_dirs() -> None:
@@ -29,14 +32,20 @@ def call_path(call_sid: str) -> Path:
     return CALLS_DIR / f"{safe_call_sid}.json"
 
 
+def _lock_for(call_sid: str) -> threading.Lock:
+    with _LOCKS_MUTEX:
+        return _WRITE_LOCKS.setdefault(call_sid, threading.Lock())
+
+
 def save_call(call_sid: str, payload: Dict[str, Any]) -> None:
-    ensure_dirs()
-    path = call_path(call_sid)
-    # Do not persist Twilio media URL in local artifacts.
-    payload_to_save = {k: v for k, v in payload.items() if k != "recording_url"}
-    with path.open("w", encoding="utf-8") as f:
-        json.dump(payload_to_save, f, indent=2, ensure_ascii=True)
-    Log.info(f"Saved call data to {path}")
+    with _lock_for(call_sid):
+        ensure_dirs()
+        path = call_path(call_sid)
+        # Do not persist Twilio media URL in local artifacts.
+        payload_to_save = {k: v for k, v in payload.items() if k != "recording_url"}
+        with path.open("w", encoding="utf-8") as f:
+            json.dump(payload_to_save, f, indent=2, ensure_ascii=True)
+        Log.info(f"Saved call data to {path}")
 
 
 def load_call(call_sid: str) -> Dict[str, Any] | None:
