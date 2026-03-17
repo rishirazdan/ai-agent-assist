@@ -28,6 +28,11 @@ load_dotenv()
 
 app = FastAPI()
 
+if os.environ.get("TWILIO_VALIDATE_SIGNATURE", "1").strip().lower() in {"0", "false", "no", "off"}:
+    Log.section("Security Warning")
+    Log.warn("TWILIO_VALIDATE_SIGNATURE=0 - webhook auth disabled. Development only.")
+    Log.kv({"stage": "startup", "twilio_validate_signature": False})
+
 
 def _is_true(name: str, default: str = "0") -> bool:
     value = os.environ.get(name, default).strip().lower()

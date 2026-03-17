@@ -22,6 +22,8 @@ Thumbs.db
 
 # Runtime call artifacts (may contain sensitive data)
 data/calls/*.mp3
+data/calls/*.wav
+data/calls/*.WAV
 data/calls/CA*.json
 data/calls/offline-*.json
 ARCHITECTURE_AND_DECISIONS.pdf
