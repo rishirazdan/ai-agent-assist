@@ -32,8 +32,10 @@ def call_path(call_sid: str) -> Path:
 def save_call(call_sid: str, payload: Dict[str, Any]) -> None:
     ensure_dirs()
     path = call_path(call_sid)
+    # Do not persist Twilio media URL in local artifacts.
+    payload_to_save = {k: v for k, v in payload.items() if k != "recording_url"}
     with path.open("w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2, ensure_ascii=True)
+        json.dump(payload_to_save, f, indent=2, ensure_ascii=True)
     Log.info(f"Saved call data to {path}")
 
 
