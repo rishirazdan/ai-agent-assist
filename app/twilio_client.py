@@ -3,10 +3,21 @@ from __future__ import annotations
 import os
 import time
 from typing import Dict, Any, List, Tuple
+from urllib.parse import urlparse
 
 import requests
 
 from .log import Log
+
+
+def is_allowed_twilio_recording_url(url: str) -> bool:
+    parsed = urlparse(url.strip())
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme != "https" or not host:
+        return False
+    if host == "api.twilio.com":
+        return True
+    return host.startswith("api.") and host.endswith(".twilio.com")
 
 
 def _auth() -> Tuple[str, str, str]:
@@ -77,6 +88,8 @@ def download_recording(recording_url: str, output_path: str) -> str:
     Log.section("Twilio Download Recording")
     _, username, password = _auth()
     base_url = recording_url.strip()
+    if not is_allowed_twilio_recording_url(base_url):
+        raise RuntimeError("recording URL host is not allowlisted")
     if base_url.endswith(".mp3"):
         candidate_urls = [base_url, base_url[:-4] + ".wav"]
     elif base_url.endswith(".wav"):
@@ -91,6 +104,9 @@ def download_recording(recording_url: str, output_path: str) -> str:
     last_error: Exception | None = None
     for attempt in range(1, 7):
         for url in candidate_urls:
+            if not is_allowed_twilio_recording_url(url):
+                last_error = RuntimeError(f"recording URL host rejected: {url}")
+                continue
             try:
                 with requests.get(url, auth=(username, password), stream=True, timeout=60) as resp:
                     if resp.status_code == 404:

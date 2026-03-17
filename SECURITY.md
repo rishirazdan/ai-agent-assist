@@ -12,9 +12,14 @@
 - `TWILIO_API_KEY_SECRET`
 - `TWILIO_AUTH_TOKEN`
 - `ADMIN_TOKEN`
+- `UI_ACCESS_TOKEN` (recommended when exposing dashboard over a public tunnel)
 
 ## Post-Rotation Verification
 1. Restart API service.
 2. Check `/health` returns `200`.
 3. Check `/env-check` returns `401` without admin token and `200` with valid token.
 4. Place one test IVR call and verify a new `CA*.json` and audio artifact appears under `data/calls/`.
+
+## Reporting Vulnerabilities
+Do not open public GitHub issues for security findings.
+Use GitHub private advisories for this repository.

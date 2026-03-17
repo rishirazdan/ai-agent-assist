@@ -88,6 +88,8 @@ Net: MCP remained useful for early discovery, but direct Twilio Studio API v2 wa
 - Twilio signature validation is enabled by default (`TWILIO_VALIDATE_SIGNATURE=1`).
   - For local troubleshooting only, temporarily disable with `TWILIO_VALIDATE_SIGNATURE=0`.
 - `/env-check` can be protected with `ADMIN_TOKEN` (optional).
+- `/calls` and `/calls/{call_sid}` can be protected with `UI_ACCESS_TOKEN` (optional, recommended for public tunnels).
+- Set `DELETE_AUDIO_AFTER_TRANSCRIBE=1` if you do not want call audio retained on disk.
 - `insufficient_quota` from OpenAI:
   - API billing is separate from ChatGPT Plus
 - No live call JSON in `data/calls/`:

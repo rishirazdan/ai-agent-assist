@@ -18,7 +18,7 @@ from .log import Log
 from .openai_client import transcribe_audio, analyze_transcript
 from .redaction import redact_text, redact_object
 from .storage import save_call, list_calls, load_call, validate_call_sid
-from .twilio_client import list_recordings, download_recording, recording_media_url
+from .twilio_client import list_recordings, download_recording, recording_media_url, is_allowed_twilio_recording_url
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -32,6 +32,18 @@ if os.environ.get("TWILIO_VALIDATE_SIGNATURE", "1").strip().lower() in {"0", "fa
     Log.section("Security Warning")
     Log.warn("TWILIO_VALIDATE_SIGNATURE=0 - webhook auth disabled. Development only.")
     Log.kv({"stage": "startup", "twilio_validate_signature": False})
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):  # type: ignore[no-untyped-def]
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'none'; style-src 'unsafe-inline'; script-src 'none'; frame-ancestors 'none'"
+    )
+    return response
 
 
 def _is_true(name: str, default: str = "0") -> bool:
@@ -132,9 +144,25 @@ def _check_admin_token(request: Request) -> None:
         bearer_token = auth[7:].strip()
 
     provided = header_token or bearer_token
-    if provided != expected:
+    if not hmac.compare_digest(provided, expected):
         Log.warn("Rejected env-check request with invalid admin token")
         Log.kv({"stage": "env_check", "reason": "unauthorized"})
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+def _require_ui_token(request: Request) -> None:
+    """
+    Optional auth gate for dashboard pages.
+    If UI_ACCESS_TOKEN is set, require it via query token or ui_token cookie.
+    """
+    expected = os.environ.get("UI_ACCESS_TOKEN", "").strip()
+    if not expected:
+        return
+
+    provided = request.query_params.get("token", "").strip() or request.cookies.get("ui_token", "").strip()
+    if not hmac.compare_digest(provided, expected):
+        Log.warn("Rejected dashboard request with invalid UI token")
+        Log.kv({"stage": "dashboard_auth", "reason": "unauthorized"})
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
@@ -144,7 +172,14 @@ def _process_twilio_call_completed_sync(
     payload: Dict[str, Any],
     audio_path: str,
 ) -> Dict[str, Any]:
-    effective_recording_url = recording_url
+    effective_recording_url = None
+    if recording_url:
+        recording_url_str = str(recording_url).strip()
+        if is_allowed_twilio_recording_url(recording_url_str):
+            effective_recording_url = recording_url_str
+        else:
+            Log.warn("Ignoring untrusted recording URL from webhook payload")
+            Log.kv({"stage": "webhook_processing", "reason": "untrusted_recording_url"})
     if not effective_recording_url:
         recordings = list_recordings(call_sid)
         if recordings:
@@ -163,6 +198,14 @@ def _process_twilio_call_completed_sync(
 
     downloaded_audio_path = download_recording(effective_recording_url, audio_path)
     raw_transcript = transcribe_audio(downloaded_audio_path)
+    if _is_true("DELETE_AUDIO_AFTER_TRANSCRIBE", default="0"):
+        try:
+            Path(downloaded_audio_path).unlink(missing_ok=True)
+            Log.info("Deleted audio file after transcription")
+            Log.kv({"stage": "audio_retention", "deleted_path": downloaded_audio_path})
+        except Exception as exc:
+            Log.warn("Failed to delete audio file after transcription")
+            Log.kv({"stage": "audio_retention", "error": str(exc)})
     transcript, transcript_redaction = redact_text(raw_transcript)
     analysis_raw = analyze_transcript(transcript)
     analysis, analysis_redaction = redact_object(analysis_raw)
@@ -239,8 +282,9 @@ def env_check(request: Request) -> Dict[str, Any]:
 
 
 @app.get("/calls", response_class=HTMLResponse)
-def calls_list() -> str:
+def calls_list(request: Request) -> str:
     Log.section("Render Calls List")
+    _require_ui_token(request)
     calls = list_calls()
     rows = []
     for c in calls:
@@ -266,8 +310,9 @@ def calls_list() -> str:
 
 
 @app.get("/calls/{call_sid}", response_class=HTMLResponse)
-def call_detail(call_sid: str) -> str:
+def call_detail(call_sid: str, request: Request) -> str:
     Log.section("Render Call Detail")
+    _require_ui_token(request)
     data = load_call(call_sid)
     if not data:
         return "<html><body><h1>Not found</h1></body></html>"
@@ -333,7 +378,15 @@ async def twilio_call_completed(request: Request) -> Dict[str, Any]:
     digits = payload.get("Digits")
 
     Log.info("Received webhook")
-    Log.kv({"stage": "webhook", "call_sid": call_sid_raw or "", "digits": digits or ""})
+    digits_str = str(digits or "").strip()
+    Log.kv(
+        {
+            "stage": "webhook",
+            "call_sid": call_sid_raw or "",
+            "has_digits": bool(digits_str),
+            "digits_len": len(digits_str),
+        }
+    )
 
     if not _validate_twilio_signature(request, payload):
         Log.warn("Rejected webhook with invalid signature")
