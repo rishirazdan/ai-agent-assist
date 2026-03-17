@@ -1,0 +1,35 @@
+name: QA Regression
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  qa-regression:
+    runs-on: ubuntu-latest
+    env:
+      TWILIO_VALIDATE_SIGNATURE: "0"
+      OPENAI_DRY_RUN: "1"
+      LOCAL_API_BASE: "http://127.0.0.1:8000"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start API server
+        run: |
+          nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > uvicorn.log 2>&1 &
+          sleep 3
+
+      - name: Run regression script
+        run: python scripts/qa_regression.py

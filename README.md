@@ -34,6 +34,8 @@ Open:
 - Architecture + design decisions: `ARCHITECTURE.md`
 - Contributor workflow: `CONTRIBUTING.md`
 - Agent automation guidance: `AGENTS.md`
+- Security operations + key rotation policy: `SECURITY.md`
+- Demo evidence checklist: `demo/ACCEPTANCE_ARTIFACTS.md`
 
 ## Current IVR Integration
 
@@ -98,3 +100,9 @@ Net: MCP remained useful for early discovery, but direct Twilio Studio API v2 wa
 Webhook retry behavior:
 
 - Handler now returns 5xx on transient processing failures so Twilio can retry delivery.
+
+## CI
+
+- GitHub Actions regression workflow: `.github/workflows/qa-regression.yml`
+- Triggered on pull requests to `main`
+- Runs `scripts/qa_regression.py` against a local CI-started API server
