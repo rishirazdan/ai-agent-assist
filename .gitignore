@@ -1,0 +1,30 @@
+# Python cache/build
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Local env/secrets
+.env
+.env.*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Runtime call artifacts (may contain sensitive data)
+data/calls/*.mp3
+data/calls/CA*.json
+data/calls/offline-*.json
+ARCHITECTURE_AND_DECISIONS.pdf
+
+# Keep sample transcript fixtures under source control
+!data/sample_transcripts/

@@ -1,0 +1,10 @@
+Caller: Hi, I just want to check my balance for my checking account.
+Agent: Welcome to Amazing Bank support. I can help with that. Before we begin, can you verify your full name and the last four of your SSN?
+Caller: Sure, it is Jordan Lee, SSN ending in 4421.
+Agent: Thanks, Jordan. For an extra check, can you confirm your mailing zip code?
+Caller: 94107.
+Agent: Great, thanks. Your current checking balance is $1,245.36 and your available balance is $1,120.12. Do you want recent transactions?
+Caller: No, that is all I needed.
+Agent: Happy to help. Is there anything else I can do?
+Caller: No.
+Agent: Thanks for calling Amazing Bank. Have a good day.

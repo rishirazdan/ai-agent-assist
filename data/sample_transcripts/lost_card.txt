@@ -1,0 +1,12 @@
+Caller: I lost my debit card this morning and I am worried about fraud.
+Agent: I am sorry to hear that. I can block the card and order a replacement. First, can you verify your name and date of birth?
+Caller: Maria Gomez, 10/14/1988.
+Agent: Thank you. And the last four digits of your Social Security number?
+Caller: 7729.
+Agent: Verified. I have blocked your current card ending in 5512. I can send a replacement to your address on file, 22 Maple St, Denver. Is that correct?
+Caller: Yes, please send it.
+Agent: Done. It will arrive in 5 to 7 business days. Do you want to review recent transactions for anything you did not recognize?
+Caller: No, not right now.
+Agent: Understood. If anything changes, call us right away. Anything else today?
+Caller: No.
+Agent: Thanks for calling Amazing Bank and we will take care of it.

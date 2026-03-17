@@ -1,0 +1,10 @@
+Caller: Hi, I have a question about my savings account interest rate.
+Agent: Sure, I can help. For security, can you verify your full name and the last four of your SSN?
+Caller: Daniel Kim, 3304.
+Agent: Thanks, Daniel. Your standard savings rate is 3.10 percent APY. Rates can change, and we notify you in your statements.
+Caller: Is there a higher rate tier?
+Agent: Yes, balances over 25,000 receive 3.75 percent APY. I can send you an information sheet by email. Would you like that?
+Caller: Yes, please.
+Agent: I will send it to the email on file. Anything else?
+Caller: No.
+Agent: Thanks for calling Amazing Bank support.

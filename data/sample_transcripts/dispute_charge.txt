@@ -1,0 +1,12 @@
+Caller: I see a charge for 129.99 from QuickTech that I did not make.
+Agent: I can help with a dispute. For security, can you verify your full name and your zip code?
+Caller: Brian Carter, 60614.
+Agent: Thanks. Now, the last four of your SSN?
+Caller: 1180.
+Agent: Great. The charge posted yesterday and is still pending. I can file a dispute once it posts, or I can set an alert. Would you like to proceed when it posts?
+Caller: Yes, please.
+Agent: I have set a case note. Once it posts, you can call or we can automatically open the dispute. I can also issue a provisional credit after review.
+Caller: That works.
+Agent: Is there anything else I can do today?
+Caller: No.
+Agent: Thanks for calling Amazing Bank.
