@@ -67,8 +67,9 @@ Restart app after updating env vars.
 
 MCP note:
 
-- MCP can help with early Twilio discovery/read checks.
-- For this repo, direct Twilio Studio API v2 calls are the primary/most reliable path for flow edits, publish/verify cycles, and callback wiring.
+- MCP can handle Twilio discovery/read checks and Studio IVR changes in Codex when `t` includes Studio services (for example `--services twilio_api_v2010,twilio_studio_v2`).
+- Cursor MCP settings may skip some Twilio tools due to a combined `server:tool` name-length cap (60 chars).
+- If Studio tools are not exposed in your client, use direct Twilio Studio API v2 as a fallback.
 
 ## 5) Smoke tests
 

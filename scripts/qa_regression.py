@@ -93,12 +93,19 @@ def check_pii_redaction() -> None:
         "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
         "dob": re.compile(r"\b(?:0?[1-9]|1[0-2])[\/\-](?:0?[1-9]|[12][0-9]|3[01])[\/\-](?:19|20)?\d{2}\b"),
         "email": re.compile(r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b"),
+        "phone": re.compile(r"\b(?:\+?1[\s\-\.]?)?(?:\(?\d{3}\)?[\s\-\.]?)\d{3}[\s\-\.]?\d{4}\b"),
+        "address": re.compile(
+            r"\b\d{1,6}\s+[A-Za-z0-9.\-'\s]{2,40}\s(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct)\b\.?",
+            re.IGNORECASE,
+        ),
+        "card": re.compile(r"\b(?:\d[ -]*?){13,19}\b"),
     }
 
     for path in files:
         payload = _load_json(path)
         transcript = str(payload.get("transcript", ""))
         analysis = payload.get("analysis", {})
+        twilio_payload = payload.get("twilio", {})
         scan_text = "\n".join(
             [
                 transcript,
@@ -108,6 +115,7 @@ def check_pii_redaction() -> None:
                 " ".join([str(v) for v in analysis.get("strengths", [])]),
                 " ".join([str(v) for v in analysis.get("improvements", [])]),
                 str(analysis.get("coaching_note", "")),
+                json.dumps(twilio_payload, ensure_ascii=True, sort_keys=True),
             ]
         )
 

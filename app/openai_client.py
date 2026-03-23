@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 import os
 import re
-from typing import Dict, Any, List
+from pathlib import Path
+from typing import Dict, Any, List, Tuple
 
 from openai import OpenAI
 
@@ -17,12 +18,20 @@ def _client() -> OpenAI:
     return OpenAI(api_key=api_key)
 
 
-def transcribe_audio(audio_path: str) -> str:
+def _transcription_fallback_text(audio_path: str) -> str:
+    file_name = Path(audio_path).name
+    return (
+        "Transcription unavailable due to OpenAI error. "
+        f"Audio file retained for retry: {file_name}."
+    )
+
+
+def transcribe_audio_with_status(audio_path: str) -> Tuple[str, str]:
     Log.section("OpenAI Transcription")
     if os.environ.get("OPENAI_DRY_RUN", "").lower() in {"1", "true", "yes"}:
         Log.warn("OPENAI_DRY_RUN enabled, returning placeholder transcription")
         Log.kv({"stage": "transcribe_audio", "audio_path": audio_path})
-        return "Transcription skipped in dry-run mode."
+        return "Transcription skipped in dry-run mode.", "dry_run"
 
     model = os.environ.get("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-mini-transcribe")
     Log.info(f"Transcribing audio with model={model}")
@@ -35,11 +44,16 @@ def transcribe_audio(audio_path: str) -> str:
             )
         text = resp.text or ""
         Log.info("Transcription completed")
-        return text
+        return text, "success"
     except Exception as exc:
-        Log.error("Transcription failed")
+        Log.error("Transcription failed, using fallback transcript")
         Log.kv({"stage": "transcribe_audio", "error": str(exc)})
-        raise
+        return _transcription_fallback_text(audio_path), "fallback"
+
+
+def transcribe_audio(audio_path: str) -> str:
+    transcript, _status = transcribe_audio_with_status(audio_path)
+    return transcript
 
 
 def _contains_any(text: str, words: List[str]) -> bool:

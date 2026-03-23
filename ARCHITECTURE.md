@@ -35,12 +35,12 @@ flowchart LR
 - **PII redaction before storage**: `app/redaction.py` sanitizes transcript/analysis payloads.
 - **Retry on recording media fetch**: `app/twilio_client.py` retries when Twilio media is not immediately available.
 
-## MCP Usage and Limitations
+## MCP Usage and Client-Specific Limits
 
-- **Used for**: early Twilio environment discovery (account/resource checks) via MCP.
-- **Limitation seen**: MCP tool exposure in this workspace was not sufficient for dependable Studio v2 flow lifecycle management.
-- **Operational impact**: rapid IVR edits (state changes, recording insertion, publish/verify loops) required direct Twilio Studio API v2 calls.
-- **Resulting approach**: keep MCP for quick discovery where useful, but treat direct API integration as the primary control plane for IVR config in this project.
+- **Used for**: Twilio discovery and operational changes via MCP (`t` / `user-t`).
+- **Cursor limitation observed**: Cursor MCP settings enforced a combined `server:tool` name-length cap (60 chars). Some Twilio tools (for example long `TwilioApiV2010--...` names) were skipped.
+- **Codex app behavior**: Codex did not block those tools in the same way; after enabling `twilio_studio_v2` on MCP server `t`, Studio tools were exposed and used to modify/publish IVR flow changes directly through MCP.
+- **Resulting approach**: MCP is a viable control plane here (including Studio flow edits) when run from Codex; direct Twilio API remains a reliable fallback path.
 
 ## Important Paths
 
