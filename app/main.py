@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import html
 import os
+import threading
 from pathlib import Path
 from typing import Dict, Any
 
@@ -15,7 +16,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse
 from dotenv import load_dotenv
 
 from .log import Log
-from .openai_client import transcribe_audio, analyze_transcript
+from .openai_client import transcribe_audio_with_status, analyze_transcript
 from .redaction import redact_text, redact_object
 from .storage import save_call, list_calls, load_call, validate_call_sid
 from .twilio_client import list_recordings, download_recording, recording_media_url, is_allowed_twilio_recording_url
@@ -27,6 +28,8 @@ CALLS_DIR = BASE_DIR / "data" / "calls"
 load_dotenv()
 
 app = FastAPI()
+_IN_PROGRESS_CALLS: set[str] = set()
+_IN_PROGRESS_CALLS_LOCK = threading.Lock()
 
 if os.environ.get("TWILIO_VALIDATE_SIGNATURE", "1").strip().lower() in {"0", "false", "no", "off"}:
     Log.section("Security Warning")
@@ -197,7 +200,7 @@ def _process_twilio_call_completed_sync(
         return {"ok": False, "error": "Invalid recording URL"}
 
     downloaded_audio_path = download_recording(effective_recording_url, audio_path)
-    raw_transcript = transcribe_audio(downloaded_audio_path)
+    raw_transcript, transcription_status = transcribe_audio_with_status(downloaded_audio_path)
     if _is_true("DELETE_AUDIO_AFTER_TRANSCRIBE", default="0"):
         try:
             Path(downloaded_audio_path).unlink(missing_ok=True)
@@ -226,11 +229,25 @@ def _process_twilio_call_completed_sync(
         "created_at": datetime.datetime.now(datetime.UTC).isoformat(),
         "twilio": twilio_payload,
         "recording_url": effective_recording_url,
+        "transcription_status": transcription_status,
         "transcript": transcript,
         "analysis": analysis,
     }
     save_call(call_sid, data)
     return {"ok": True, "call_sid": call_sid}
+
+
+def _reserve_call_processing(call_sid: str) -> bool:
+    with _IN_PROGRESS_CALLS_LOCK:
+        if call_sid in _IN_PROGRESS_CALLS:
+            return False
+        _IN_PROGRESS_CALLS.add(call_sid)
+    return True
+
+
+def _release_call_processing(call_sid: str) -> None:
+    with _IN_PROGRESS_CALLS_LOCK:
+        _IN_PROGRESS_CALLS.discard(call_sid)
 
 
 @app.get("/")
@@ -409,10 +426,14 @@ async def twilio_call_completed(request: Request) -> Dict[str, Any]:
         Log.kv({"stage": "idempotency_guard", "call_sid": call_sid, "duplicate": True})
         return {"ok": True, "call_sid": call_sid, "duplicate": True}
 
-    CALLS_DIR.mkdir(parents=True, exist_ok=True)
-    audio_path = str(CALLS_DIR / f"{call_sid}.mp3")
+    if not _reserve_call_processing(call_sid):
+        Log.warn("Duplicate webhook ignored while processing is in-flight")
+        Log.kv({"stage": "idempotency_guard", "call_sid": call_sid, "duplicate": True, "in_progress": True})
+        return {"ok": True, "call_sid": call_sid, "duplicate": True, "in_progress": True}
 
     try:
+        CALLS_DIR.mkdir(parents=True, exist_ok=True)
+        audio_path = str(CALLS_DIR / f"{call_sid}.mp3")
         Log.info("Offloading webhook processing to worker thread")
         Log.kv({"stage": "webhook_processing", "call_sid": call_sid})
         result = await asyncio.to_thread(
@@ -438,3 +459,5 @@ async def twilio_call_completed(request: Request) -> Dict[str, Any]:
         Log.kv({"stage": "webhook_processing", "error": str(exc)})
         # Return 503 so Twilio can retry on transient failures.
         raise HTTPException(status_code=503, detail="processing_failed")
+    finally:
+        _release_call_processing(call_sid)

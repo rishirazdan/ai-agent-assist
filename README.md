@@ -62,26 +62,25 @@ The project is not just consuming Twilio webhooks; it also configured Twilio res
 
 In short: Twilio IVR creation/configuration and app ingestion were both implemented in this repo workflow.
 
-## MCP Usage and Why We Switched
+## MCP Usage and Client Differences
 
 ### What MCP was used for
 
 - Initial Twilio account/resource discovery through the `user-t` MCP server
 - Fast read checks while bootstrapping the PoC (account SID/resource visibility)
+- Studio IVR updates from Codex after enabling Studio service exposure on `t`
 
-### Current MCP limitations observed
+### Limitation seen in Cursor settings
 
-- Available MCP toolset was mostly Twilio API v2010 coverage, with no reliable Studio v2 flow-management tools exposed in this environment
-- Authentication behavior was inconsistent for some MCP calls during live setup
-- This made Studio flow edits and verification slower/less deterministic for iterative IVR work
+- Cursor MCP setup enforced a combined `server:tool` name-length cap (60 chars)
+- A subset of long Twilio tool names was skipped/disabled because of that cap
 
-### Why direct Studio API v2 was used
+### Codex app behavior
 
-- Needed deterministic control of Studio Flow updates (menu states, transitions, recording widget, publish/validate)
-- Needed explicit read/write endpoints for flow revisions and phone-number callback wiring
-- Direct API calls allowed faster debug loops and clear request/response validation
+- Codex MCP exposure did not have the same blocking behavior for these tools
+- With `--services twilio_api_v2010,twilio_studio_v2`, Codex exposed Studio v2 tools and successfully applied IVR edits via MCP (including publish/verify flow updates)
 
-Net: MCP remained useful for early discovery, but direct Twilio Studio API v2 was required for reliable IVR implementation and maintenance.
+Net: in this repo, MCP from Codex is sufficient for both discovery and Studio IVR maintenance. Direct Twilio API remains a fallback option.
 
 ## Troubleshooting (Fast Path)
 
