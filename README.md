@@ -107,3 +107,30 @@ Webhook retry behavior:
 - GitHub Actions regression workflow: `.github/workflows/qa-regression.yml`
 - Triggered on pull requests to `main`
 - Runs `scripts/qa_regression.py` against a local CI-started API server
+
+## Optional Hosted Evaluations (Braintrust)
+
+Braintrust is optional. The application and the local regression suite do not
+require a Braintrust account or API key. Continue to use
+`python scripts/qa_regression.py` for local pass/fail validation.
+
+Braintrust adds hosted experiment tracking on top of the local checks:
+
+- preserves evaluation history across prompt, model, and code changes
+- compares runs and scorer results side by side
+- provides a dashboard for inspecting individual failures
+- shares evaluation results with a team
+- supports CI quality tracking and production trace analysis
+
+The API key authenticates uploads of evaluation inputs, outputs, scores, and
+metadata to your Braintrust account. Do not use Braintrust if call data must
+remain entirely local.
+
+- Install the optional evaluation dependency:
+  - `python -m pip install braintrust autoevals`
+- Configure your Braintrust account:
+  - `BRAINTRUST_API_KEY=...`
+- Run offline-safe eval (defaults to `OPENAI_DRY_RUN=1`):
+  - `braintrust eval scripts/eval_braintrust_call_quality.py`
+- Run with real OpenAI scoring:
+  - `$env:BT_USE_OPENAI="1"; braintrust eval scripts/eval_braintrust_call_quality.py`

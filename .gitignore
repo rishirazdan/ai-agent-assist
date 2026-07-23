@@ -20,6 +20,9 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Local Codex skill drafts (not part of the application)
+skill-drafts/
+
 # Runtime call artifacts (may contain sensitive data)
 data/calls/*.mp3
 data/calls/*.wav
