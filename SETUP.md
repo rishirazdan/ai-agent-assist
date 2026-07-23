@@ -80,6 +80,28 @@ python -m app.offline_demo
 python scripts/qa_regression.py
 ```
 
+Optional Braintrust evaluation (offline-safe by default):
+
+Braintrust is not required to run the application or
+`scripts/qa_regression.py`. Use it only when you want hosted evaluation
+history, run comparisons, failure inspection, team sharing, or CI/production
+quality tracking. Its API key authenticates evaluation uploads to your
+Braintrust account, so skip this setup when results and call data must remain
+entirely local.
+
+```powershell
+python -m pip install braintrust autoevals
+$env:BRAINTRUST_API_KEY="..."
+braintrust eval scripts/eval_braintrust_call_quality.py
+```
+
+Optionally use live OpenAI during Braintrust evals:
+
+```powershell
+$env:BT_USE_OPENAI="1"
+braintrust eval scripts/eval_braintrust_call_quality.py
+```
+
 Live:
 
 1. Place a test call to IVR number

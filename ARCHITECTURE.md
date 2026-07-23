@@ -23,7 +23,7 @@ flowchart LR
   H --> I[Transcript + QA JSON]
   E --> J[Storage app/storage.py]
   J --> K[data/calls/*.json + *.mp3]
-  K --> L[/calls dashboard]
+  K --> L["/calls dashboard"]
 ```
 
 ## Key Design Decisions
@@ -50,6 +50,7 @@ flowchart LR
 - Redaction logic: `app/redaction.py`
 - Storage helpers: `app/storage.py`
 - Regression checks: `scripts/qa_regression.py`
+- Optional hosted evaluation tracking: `scripts/eval_braintrust_call_quality.py` (Braintrust; not required for local regression)
 
 ## Operational Notes
 

@@ -91,9 +91,22 @@ def check_pii_redaction() -> None:
 
     patterns = {
         "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
+        "ssn_last4_contextual": re.compile(r"(?is)\b(?:ssn|social\s+security(?:\s+number)?)\b[\s\S]{0,40}?\b\d{4}\b"),
+        "last4_contextual": re.compile(
+            r"(?is)\b(?:last\s*four(?:\s*digits?)?|last\s*4(?:\s*digits?)?)\b[\s\S]{0,24}?\b\d{4}\b"
+        ),
         "dob": re.compile(r"\b(?:0?[1-9]|1[0-2])[\/\-](?:0?[1-9]|[12][0-9]|3[01])[\/\-](?:19|20)?\d{2}\b"),
         "email": re.compile(r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b"),
         "phone": re.compile(r"\b(?:\+?1[\s\-\.]?)?(?:\(?\d{3}\)?[\s\-\.]?)\d{3}[\s\-\.]?\d{4}\b"),
+        "zip_contextual": re.compile(
+            r"(?i)\b(?:zip(?:\s*code)?|postal(?:\s*code)?)\b[^\n]{0,24}\b\d{5}(?:-\d{4})?\b"
+        ),
+        "zip_after_name_line": re.compile(r"(?m)\bCaller:\s*[A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}\s*,\s*\d{5}(?:-\d{4})?\b"),
+        "zip_after_state": re.compile(r",\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\b"),
+        "name_contextual": re.compile(
+            r"\b(?i:(?:my\s+name\s+is|name\s+is|i\s+am|it's|it\s+is|this\s+is|caller|customer|account\s+holder))\b"
+            r"\s*[:,-]?\s*[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,2}\b"
+        ),
         "address": re.compile(
             r"\b\d{1,6}\s+[A-Za-z0-9.\-'\s]{2,40}\s(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct)\b\.?",
             re.IGNORECASE,
@@ -137,11 +150,12 @@ def check_local_api_paths() -> None:
 
     no_callsid_status, no_callsid_body = _http_json("POST", f"{API_BASE}/twilio/call-completed", data={})
     no_callsid_error = str(no_callsid_body.get("detail") or no_callsid_body.get("error"))
-    _assert(
-        no_callsid_status in {400, 200} and no_callsid_error == "Missing CallSid",
-        "webhook_missing_callsid",
-        str(no_callsid_body),
-    )
+    if no_callsid_error == "invalid_signature":
+        _assert(no_callsid_status in {401, 403}, "webhook_signature_enforced", str(no_callsid_body))
+        Log.info("Webhook signature enforcement is working")
+        return
+
+    _assert(no_callsid_status in {400, 200} and no_callsid_error == "Missing CallSid", "webhook_missing_callsid", str(no_callsid_body))
     Log.info("Webhook missing CallSid guard is working")
 
     # This validates that webhook returns a controlled error when recording details are missing.

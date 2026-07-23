@@ -13,6 +13,48 @@ _ADDRESS = re.compile(
     re.IGNORECASE,
 )
 _CARD_CANDIDATE = re.compile(r"\b(?:\d[ -]*?){13,19}\b")
+_ZIP_CONTEXTUAL = re.compile(
+    r"(?i)\b(?:zip(?:\s*code)?|postal(?:\s*code)?)\b[^\n]{0,24}\b(\d{5}(?:-\d{4})?)\b"
+)
+_ZIP_AFTER_NAME_LINE = re.compile(r"(?m)\bCaller:\s*[A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}\s*,\s*(\d{5}(?:-\d{4})?)\b")
+_ZIP_AFTER_STATE = re.compile(r",\s*[A-Z]{2}\s+(\d{5}(?:-\d{4})?)\b")
+_SSN_LAST4_CONTEXTUAL = re.compile(r"(?is)\b(?:ssn|social\s+security(?:\s+number)?)\b[\s\S]{0,40}?\b(\d{4})\b")
+_LAST4_HINT_CONTEXTUAL = re.compile(r"(?is)\b(?:last\s*four(?:\s*digits?)?|last\s*4(?:\s*digits?)?)\b[\s\S]{0,24}?\b(\d{4})\b")
+_NAME_CONTEXTUAL_PATTERNS = [
+    re.compile(
+        r"\b(?i:(?:my\s+name\s+is|name\s+is|i\s+am|it's|it\s+is|this\s+is))\s+"
+        r"([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,2})\b"
+    ),
+    re.compile(
+        r"\b(?i:(?:caller|customer|account\s+holder))\b\s*[:,-]?\s*"
+        r"([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,2})\b"
+    ),
+]
+
+
+def _redact_contextual_group(text: str, pattern: re.Pattern[str], replacement: str) -> Tuple[str, int]:
+    replacements = 0
+
+    def repl(match: re.Match[str]) -> str:
+        nonlocal replacements
+        group_start, group_end = match.span(1)
+        match_start = match.start()
+        local_start = group_start - match_start
+        local_end = group_end - match_start
+        replacements += 1
+        matched = match.group(0)
+        return matched[:local_start] + replacement + matched[local_end:]
+
+    return pattern.sub(repl, text), replacements
+
+
+def _redact_contextual_names(text: str) -> Tuple[str, int]:
+    output = text
+    replacements = 0
+    for pattern in _NAME_CONTEXTUAL_PATTERNS:
+        output, count = _redact_contextual_group(output, pattern, "[REDACTED_NAME]")
+        replacements += count
+    return output, replacements
 
 
 def _redact_card_candidates(text: str) -> Tuple[str, int]:
@@ -49,6 +91,30 @@ def redact_text(text: str) -> Tuple[str, Dict[str, int]]:
         output, count = pattern.subn(replacement, output)
         stats[name] = count
         total += count
+
+    output, count = _redact_contextual_group(output, _SSN_LAST4_CONTEXTUAL, "[REDACTED_SSN_LAST4]")
+    stats["ssn_last4"] = count
+    total += count
+
+    output, count = _redact_contextual_group(output, _LAST4_HINT_CONTEXTUAL, "[REDACTED_SSN_LAST4]")
+    stats["ssn_last4_hint"] = count
+    total += count
+
+    output, count = _redact_contextual_group(output, _ZIP_CONTEXTUAL, "[REDACTED_ZIP]")
+    stats["zip"] = count
+    total += count
+
+    output, count = _redact_contextual_group(output, _ZIP_AFTER_NAME_LINE, "[REDACTED_ZIP]")
+    stats["zip_after_name"] = count
+    total += count
+
+    output, count = _redact_contextual_group(output, _ZIP_AFTER_STATE, "[REDACTED_ZIP]")
+    stats["zip_after_state"] = count
+    total += count
+
+    output, count = _redact_contextual_names(output)
+    stats["name"] = count
+    total += count
 
     output, card_count = _redact_card_candidates(output)
     stats["card"] = card_count
