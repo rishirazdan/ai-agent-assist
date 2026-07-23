@@ -2,7 +2,7 @@
 
 Call-center analytics proof-of-concept that combines Twilio Voice + Studio with OpenAI transcription and QA scoring.
 
-Audience: hiring managers (quick project understanding) and contributors (implementation details + runbook).
+
 
 ## What It Does
 
